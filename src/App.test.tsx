@@ -1,12 +1,44 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import type { Post, User } from './types'
+
+const users: User[] = [
+  { id: 1, name: 'Leanne Graham', username: 'Bret', email: 'leanne@example.com' },
+  { id: 2, name: 'Ervin Howell', username: 'Antonette', email: 'ervin@example.com' },
+]
+
+const posts: Post[] = [{ id: 11, userId: 2, title: 'Post de Ervin', body: 'Contenido del post' }]
+
+function jsonResponse(data: unknown) {
+  return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } })
+}
+
+beforeEach(() => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = String(input)
+    if (url.endsWith('/users')) return jsonResponse(users)
+    if (url.includes('/posts?userId=2')) return jsonResponse(posts)
+    return new Response(null, { status: 404 })
+  })
+})
 
 describe('App', () => {
-  it('muestra el título principal', () => {
+  it('muestra la carga, la lista de usuarios y las publicaciones del elegido', async () => {
+    const user = userEvent.setup()
     render(<App />)
-    expect(
-      screen.getByRole('heading', { level: 1, name: /usuarios y publicaciones/i }),
-    ).toBeInTheDocument()
+
+    expect(screen.getByRole('heading', { level: 1, name: /usuarios y publicaciones/i })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/cargando usuarios/i)
+
+    const ervin = await screen.findByRole('button', { name: /ervin howell/i })
+    expect(screen.getByText(/selecciona un usuario/i)).toBeInTheDocument()
+
+    await user.click(ervin)
+
+    expect(ervin).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('heading', { name: /publicaciones de ervin howell/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Post de Ervin' })).toBeInTheDocument()
   })
 })
