@@ -20,11 +20,19 @@ export function UserPosts({ user }: { user: User }) {
   const posts = useFetch(fetchPosts)
   const { setData: setPosts } = posts
 
-  // Al elegir un usuario, el foco pasa al encabezado del panel: los lectores de pantalla
-  // anuncian el contexto nuevo y, en móvil (una columna), el navegador lo desplaza a la vista.
+  // Al elegir un usuario, el foco pasa al encabezado del panel (los lectores de pantalla
+  // anuncian el contexto nuevo). focus() por sí solo desplaza "lo justo" y en móvil dejaba el
+  // encabezado pegado al borde inferior: si queda en la mitad de abajo, se lleva arriba.
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
-    headingRef.current?.focus()
+    const heading = headingRef.current
+    if (!heading) return
+    heading.focus({ preventScroll: true })
+    const { top } = heading.getBoundingClientRect()
+    if (top < 0 || top > window.innerHeight / 2) {
+      // El suavizado lo decide CSS (scroll-behavior), que respeta prefers-reduced-motion.
+      heading.scrollIntoView?.({ block: 'start' })
+    }
   }, [user.id])
 
   // Igual que en la lista: al reintentar, el foco no se pierde al desaparecer el botón.
@@ -39,7 +47,7 @@ export function UserPosts({ user }: { user: User }) {
   )
 
   return (
-    <section className="panel">
+    <section className="panel posts-panel">
       {/* React 19 lleva <title> al <head>: el título de la pestaña refleja la vista actual. */}
       <title>{`Publicaciones de ${user.name} | Usuarios y publicaciones`}</title>
 
