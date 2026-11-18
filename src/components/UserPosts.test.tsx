@@ -11,6 +11,35 @@ function jsonResponse(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
 }
 
+describe('UserPosts: estados de carga, error y vacío', () => {
+  it('muestra el error al cargar publicaciones y las recupera al reintentar', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({}, 503))
+      .mockResolvedValueOnce(jsonResponse(existing))
+    const user = userEvent.setup()
+    render(<UserPosts user={ervin} />)
+
+    expect(screen.getByRole('progressbar', { name: /cargando publicaciones/i })).toBeInTheDocument()
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('(503)')
+    // Sin publicaciones cargadas no se ofrece el formulario.
+    expect(screen.queryByRole('form', { name: /nueva publicación/i })).not.toBeInTheDocument()
+
+    await user.click(within(alert).getByRole('button', { name: 'Reintentar' }))
+
+    expect(screen.getByRole('heading', { name: /publicaciones de ervin howell/i })).toHaveFocus()
+    expect(await screen.findByRole('heading', { name: 'Post existente' })).toBeInTheDocument()
+    expect(screen.getByRole('form', { name: /nueva publicación/i })).toBeInTheDocument()
+  })
+
+  it('indica cuando el usuario no tiene publicaciones', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse([]))
+    render(<UserPosts user={ervin} />)
+
+    expect(await screen.findByText('Este usuario no tiene publicaciones.')).toBeInTheDocument()
+  })
+})
+
 describe('UserPosts: crear publicación', () => {
   it('añade la publicación nueva al principio de la lista', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {

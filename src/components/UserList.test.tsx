@@ -21,6 +21,37 @@ function renderList() {
   return { user: userEvent.setup(), search: screen.getByRole('searchbox', { name: /buscar por nombre/i }) }
 }
 
+describe('UserList: estados de carga y error', () => {
+  it('muestra el error de la API y recupera la lista al reintentar', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(users), { headers: { 'Content-Type': 'application/json' } }),
+      )
+    const user = userEvent.setup()
+    render(<UserList selectedUserId={null} onSelect={vi.fn()} />)
+
+    expect(screen.getByRole('progressbar', { name: /cargando usuarios/i })).toBeInTheDocument()
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('El servidor respondió con un error (500).')
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+
+    await user.click(within(alert).getByRole('button', { name: 'Reintentar' }))
+
+    // El foco no se pierde al desaparecer el botón: pasa al encabezado del panel.
+    expect(screen.getByRole('heading', { name: 'Usuarios' })).toHaveFocus()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(await screen.findAllByRole('button', { name: /@/ })).toHaveLength(3)
+  })
+
+  it('muestra un mensaje de conexión si falla la red', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+    render(<UserList selectedUserId={null} onSelect={vi.fn()} />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/no se pudo conectar con el servidor/i)
+  })
+})
+
 describe('UserList: búsqueda por nombre', () => {
   it('filtra la lista mientras se escribe, sin distinguir mayúsculas', async () => {
     const { user, search } = renderList()
