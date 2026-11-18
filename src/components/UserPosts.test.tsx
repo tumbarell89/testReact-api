@@ -23,13 +23,13 @@ describe('UserPosts: estados de carga, error y vacío', () => {
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('(503)')
     // Sin publicaciones cargadas no se ofrece el formulario.
-    expect(screen.queryByRole('form', { name: /nueva publicación/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /añadir publicación/i })).not.toBeInTheDocument()
 
     await user.click(within(alert).getByRole('button', { name: 'Reintentar' }))
 
     expect(screen.getByRole('heading', { name: /publicaciones de ervin howell/i })).toHaveFocus()
     expect(await screen.findByRole('heading', { name: 'Post existente' })).toBeInTheDocument()
-    expect(screen.getByRole('form', { name: /nueva publicación/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /añadir publicación/i })).toBeInTheDocument()
   })
 
   it('indica cuando el usuario no tiene publicaciones', async () => {
@@ -54,9 +54,10 @@ describe('UserPosts: crear publicación', () => {
 
     await screen.findByRole('heading', { name: 'Post existente' })
 
+    await user.click(screen.getByRole('button', { name: /añadir publicación/i }))
     await user.type(screen.getByRole('textbox', { name: /título/i }), 'Mi nuevo post')
     await user.type(screen.getByRole('textbox', { name: /texto/i }), 'Contenido nuevo')
-    await user.click(screen.getByRole('button', { name: /publicar/i }))
+    await user.click(screen.getByRole('button', { name: /^publicar$/i }))
 
     const items = await screen.findAllByRole('listitem')
     expect(items).toHaveLength(2)

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { flushSync } from 'react-dom'
 import { createPost, getErrorMessage, isAbortError } from '../api/client'
 import type { Post } from '../types'
 import {
@@ -26,14 +27,21 @@ interface PostFormProps {
 type SubmitState = { status: 'idle' } | { status: 'submitting' } | { status: 'error'; message: string }
 
 /**
- * Formulario de nueva publicación con validación accesible:
+ * Formulario de nueva publicación, plegado tras un botón "Añadir publicación"
+ * (patrón disclosure: aria-expanded + aria-controls).
+ *
+ * Validación accesible:
  * - Los errores aparecen al salir de un campo editado o al enviar, nunca antes de interactuar.
  * - Un error desaparece en cuanto el campo se corrige.
  * - Tras un envío fallido, el foco va al primer campo inválido (que anuncia su error).
  * - El botón sigue enabled; solo se bloquea (aria-disabled) mientras se envía, para evitar dobles envíos.
+ *
+ * Foco: al desplegar va al título; al plegar (Cancelar o publicación correcta) vuelve al
+ * botón "Añadir publicación", porque el control que tenía el foco desaparece.
  */
 export function PostForm({ userId, onCreated }: PostFormProps) {
   const ids = {
+    form: useId(),
     heading: useId(),
     title: useId(),
     body: useId(),
@@ -42,6 +50,7 @@ export function PostForm({ userId, onCreated }: PostFormProps) {
   }
   const errorIds: Record<PostFormField, string> = { title: ids.titleError, body: ids.bodyError }
 
+  const [expanded, setExpanded] = useState(false)
   const [values, setValues] = useState<PostFormValues>(EMPTY_VALUES)
   const [errors, setErrors] = useState<PostFormErrors>({})
   const [edited, setEdited] = useState<Partial<Record<PostFormField, boolean>>>({})
@@ -49,6 +58,7 @@ export function PostForm({ userId, onCreated }: PostFormProps) {
   const [successMessage, setSuccessMessage] = useState('')
   const [announcement, setAnnouncement] = useState('')
 
+  const toggleRef = useRef<HTMLButtonElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const announceTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -71,10 +81,44 @@ export function PostForm({ userId, onCreated }: PostFormProps) {
     announceTimer.current = setTimeout(() => setAnnouncement(message), ERROR_ANNOUNCE_DELAY_MS)
   }
 
+  function resetForm() {
+    clearTimeout(announceTimer.current)
+    setAnnouncement('')
+    setValues(EMPTY_VALUES)
+    setEdited({})
+    setErrors({})
+    setSubmit({ status: 'idle' })
+  }
+
+  /** Pliega el formulario y devuelve el foco al botón que lo abre. */
+  function collapse() {
+    flushSync(() => setExpanded(false))
+    toggleRef.current?.focus()
+  }
+
+  function handleToggle() {
+    if (expanded) {
+      // Plegar desde el propio botón conserva el borrador; "Cancelar" lo descarta.
+      setExpanded(false)
+      return
+    }
+    // flushSync: el campo tiene que estar visible para poder enfocarlo en este mismo gesto.
+    flushSync(() => {
+      setExpanded(true)
+      setSuccessMessage('')
+    })
+    titleRef.current?.focus()
+  }
+
+  function handleCancel() {
+    requestController.current?.abort()
+    resetForm()
+    collapse()
+  }
+
   function handleChange(field: PostFormField, value: string) {
     setValues((current) => ({ ...current, [field]: value }))
     setEdited((current) => ({ ...current, [field]: true }))
-    setSuccessMessage('')
     // Mientras se escribe solo se BORRA un error ya visible (si se ha corregido); nunca se añade.
     if (errors[field] && !validateField(field, value)) {
       setErrors((current) => ({ ...current, [field]: undefined }))
@@ -109,7 +153,6 @@ export function PostForm({ userId, onCreated }: PostFormProps) {
     const controller = new AbortController()
     requestController.current = controller
     setSubmit({ status: 'submitting' })
-    setSuccessMessage('')
 
     try {
       const created = await createPost(
@@ -117,11 +160,9 @@ export function PostForm({ userId, onCreated }: PostFormProps) {
         controller.signal,
       )
       onCreated(created)
-      setValues(EMPTY_VALUES)
-      setEdited({})
-      setErrors({})
-      setSubmit({ status: 'idle' })
+      resetForm()
       setSuccessMessage(`Publicación «${created.title}» creada.`)
+      collapse()
     } catch (error) {
       if (isAbortError(error)) return
       setSubmit({ status: 'error', message: getErrorMessage(error) })
@@ -144,47 +185,80 @@ export function PostForm({ userId, onCreated }: PostFormProps) {
   }
 
   return (
-    <form className="post-form" aria-labelledby={ids.heading} noValidate onSubmit={handleSubmit}>
-      <h3 id={ids.heading}>Nueva publicación</h3>
-      <p className="form-hint">
-        Los campos marcados con <span aria-hidden="true">*</span>
-        <span className="visually-hidden">asterisco</span> son obligatorios.
-      </p>
-
-      <div className="field">
-        <label htmlFor={ids.title}>
-          {LABELS.title} <span aria-hidden="true">*</span>
-        </label>
-        <input
-          ref={titleRef}
-          type="text"
-          enterKeyHint="next"
-          {...fieldProps('title')}
-          onChange={(event) => handleChange('title', event.target.value)}
-        />
-        {errors.title && <FieldError id={ids.titleError} message={errors.title} />}
-      </div>
-
-      <div className="field">
-        <label htmlFor={ids.body}>
-          {LABELS.body} <span aria-hidden="true">*</span>
-        </label>
-        <textarea
-          ref={bodyRef}
-          rows={4}
-          {...fieldProps('body')}
-          onChange={(event) => handleChange('body', event.target.value)}
-        />
-        {errors.body && <FieldError id={ids.bodyError} message={errors.body} />}
-      </div>
-
-      {submit.status === 'error' && <ErrorMessage message={`No se pudo publicar. ${submit.message}`} />}
-
-      <button type="submit" className="button-primary" aria-disabled={isSubmitting || undefined}>
-        {isSubmitting ? 'Publicando…' : 'Publicar'}
+    <div className="post-form-container">
+      <button
+        ref={toggleRef}
+        type="button"
+        className="button-primary add-post-toggle"
+        aria-expanded={expanded}
+        aria-controls={ids.form}
+        onClick={handleToggle}
+      >
+        <span className="toggle-icon" aria-hidden="true">
+          +
+        </span>
+        Añadir publicación
       </button>
 
-      {/* Resultado del envío, visible y anunciado de forma educada. */}
+      <form
+        id={ids.form}
+        className="post-form"
+        aria-labelledby={ids.heading}
+        noValidate
+        hidden={!expanded}
+        onSubmit={handleSubmit}
+      >
+        <h3 id={ids.heading}>Nueva publicación</h3>
+        <p className="form-hint">
+          Los campos marcados con <span aria-hidden="true">*</span>
+          <span className="visually-hidden">asterisco</span> son obligatorios.
+        </p>
+
+        <div className="field">
+          <label htmlFor={ids.title}>
+            {LABELS.title} <span aria-hidden="true">*</span>
+          </label>
+          <input
+            ref={titleRef}
+            type="text"
+            enterKeyHint="next"
+            {...fieldProps('title')}
+            onChange={(event) => handleChange('title', event.target.value)}
+          />
+          {errors.title && <FieldError id={ids.titleError} message={errors.title} />}
+        </div>
+
+        <div className="field">
+          <label htmlFor={ids.body}>
+            {LABELS.body} <span aria-hidden="true">*</span>
+          </label>
+          <textarea
+            ref={bodyRef}
+            rows={4}
+            {...fieldProps('body')}
+            onChange={(event) => handleChange('body', event.target.value)}
+          />
+          {errors.body && <FieldError id={ids.bodyError} message={errors.body} />}
+        </div>
+
+        {submit.status === 'error' && <ErrorMessage message={`No se pudo publicar. ${submit.message}`} />}
+
+        <div className="form-actions">
+          <button type="submit" className="button-primary" aria-disabled={isSubmitting || undefined}>
+            {isSubmitting ? 'Publicando…' : 'Publicar'}
+          </button>
+          <button type="button" className="button-secondary" onClick={handleCancel}>
+            Cancelar
+          </button>
+        </div>
+
+        {/* Única región viva para los errores que aparecen al salir de un campo. */}
+        <div className="visually-hidden" aria-live="polite">
+          {announcement}
+        </div>
+      </form>
+
+      {/* Fuera del formulario: sigue visible y se anuncia aunque el formulario se pliegue. */}
       <p className="form-success" role="status">
         {successMessage && (
           <>
@@ -193,12 +267,7 @@ export function PostForm({ userId, onCreated }: PostFormProps) {
           </>
         )}
       </p>
-
-      {/* Única región viva para los errores que aparecen al salir de un campo. */}
-      <div className="visually-hidden" aria-live="polite">
-        {announcement}
-      </div>
-    </form>
+    </div>
   )
 }
 

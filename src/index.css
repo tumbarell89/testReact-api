@@ -93,6 +93,11 @@
   box-sizing: border-box;
 }
 
+/* Un `display` de autor (grid, flex…) anularía el `display: none` del atributo hidden */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: var(--color-bg);
@@ -399,16 +404,64 @@ textarea {
 }
 
 /* =============================================================================
-   Formulario de nueva publicación
+   Formulario de nueva publicación (plegable)
    ========================================================================== */
+.post-form-container {
+  margin-block-end: var(--space-4);
+}
+
+.post-form-container > .post-form {
+  margin-block-start: var(--space-3);
+}
+
+/* El aviso de éxito siempre está en el DOM (región viva fiable); solo ocupa sitio con texto */
+.post-form-container > .form-success:not(:empty) {
+  margin-block-start: var(--space-3);
+}
+
+.add-post-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toggle-icon {
+  font-size: 1.25em;
+  line-height: 1;
+  /* "+" girado 45° se lee como "×" cuando el formulario está abierto */
+  transition: rotate 150ms ease-out;
+}
+
+.add-post-toggle[aria-expanded='true'] .toggle-icon {
+  rotate: 45deg;
+}
+
 .post-form {
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4);
-  margin-block-end: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: color-mix(in oklab, var(--color-surface), var(--color-bg) 50%);
+
+  /* Entrada suave al desplegar (de display:none a visible) con @starting-style.
+     El desplazamiento solo si el usuario no pidió reducir el movimiento. */
+  transition: opacity 150ms ease-out;
+  @starting-style {
+    opacity: 0;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity 150ms ease-out, translate 150ms ease-out;
+    @starting-style {
+      translate: 0 -0.5rem;
+    }
+  }
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .post-form h3,
@@ -447,6 +500,7 @@ textarea {
 }
 
 .form-success {
+  margin-block: 0;
   color: var(--color-success);
   font-weight: 500;
 }
