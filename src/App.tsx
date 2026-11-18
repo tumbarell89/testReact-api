@@ -7,10 +7,13 @@ function App() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
   return (
-    <main className="app">
-      <h1>Usuarios y publicaciones</h1>
+    <div className="app">
+      <header className="app-header">
+        <h1>Usuarios y publicaciones</h1>
+        <p>Busca un usuario, consulta sus publicaciones y crea una nueva.</p>
+      </header>
 
-      <div className="layout">
+      <main className="layout">
         <UserList selectedUserId={selectedUser?.id ?? null} onSelect={setSelectedUser} />
 
         {selectedUser ? (
@@ -20,8 +23,8 @@ function App() {
             <p>Selecciona un usuario para ver sus publicaciones.</p>
           </section>
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }
 
