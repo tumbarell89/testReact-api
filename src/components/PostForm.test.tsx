@@ -95,6 +95,29 @@ describe('PostForm: envío', () => {
     expect(body).toHaveValue('')
   })
 
+  it('bloquea los envíos dobles mientras se publica', async () => {
+    let resolveFetch!: (response: Response) => void
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockReturnValue(new Promise<Response>((resolve) => (resolveFetch = resolve)))
+    const { user, onCreated, title, body, submit } = renderForm()
+
+    await user.type(title, 'Título')
+    await user.type(body, 'Texto')
+    await user.click(submit)
+
+    expect(submit).toHaveAttribute('aria-disabled', 'true')
+    expect(submit).toHaveTextContent('Publicando…')
+    expect(submit).toHaveFocus() // aria-disabled (no disabled) mantiene el foco en el botón
+
+    await user.click(submit)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    resolveFetch(jsonResponse({ id: 101, userId: 7, title: 'Título', body: 'Texto' }))
+    await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1))
+    expect(submit).not.toHaveAttribute('aria-disabled')
+  })
+
   it('muestra el error de la API y conserva lo escrito', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({}, 500))
     const { user, onCreated, title, body, submit } = renderForm()

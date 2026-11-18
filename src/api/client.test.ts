@@ -54,6 +54,28 @@ describe('api client', () => {
     expect(getErrorMessage(error)).toMatch(/no se pudo conectar/i)
   })
 
+  it('convierte un timeout en ApiError con mensaje propio', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new DOMException('timeout', 'TimeoutError'))
+
+    const error = await getUsers().catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(getErrorMessage(error)).toBe('El servidor tardó demasiado en responder.')
+  })
+
+  it('propaga la cancelación voluntaria sin convertirla en error de la app', async () => {
+    const abort = new DOMException('aborted', 'AbortError')
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(abort)
+
+    await expect(getUsers()).rejects.toBe(abort)
+  })
+
+  it('detecta una respuesta que no es JSON válido', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('<html>oops</html>', { status: 200 }))
+
+    const error = await getUsers().catch((e: unknown) => e)
+    expect(getErrorMessage(error)).toBe('La respuesta del servidor no es válida.')
+  })
+
   it('da un mensaje genérico para errores desconocidos', () => {
     expect(getErrorMessage('boom')).toBe('Ha ocurrido un error inesperado.')
   })

@@ -80,4 +80,23 @@ describe('UserList: búsqueda por nombre', () => {
     expect(within(screen.getByRole('list')).getAllByRole('button')).toHaveLength(3)
     await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement())
   })
+
+  it('está dentro de un elemento <search> y Enter no envía el formulario', async () => {
+    const { user, search } = renderList()
+    await screen.findByRole('list')
+
+    // Los navegadores exponen <search> como landmark "search"; jsdom/aria-query aún no lo
+    // mapean, así que se comprueba el elemento en vez de añadir un role redundante.
+    expect(search.closest('search')).not.toBeNull()
+
+    // Se guarda el evento y se inspecciona después: React lo gestiona en la raíz, así que
+    // preventDefault() ocurre después de que lo vea un listener colocado en el propio form.
+    const submits: Event[] = []
+    ;(search as HTMLInputElement).form?.addEventListener('submit', (event) => submits.push(event))
+    await user.type(search, 'leanne{Enter}')
+
+    expect(submits).toHaveLength(1)
+    expect(submits[0].defaultPrevented).toBe(true) // no recarga la página
+    expect(search).toHaveValue('leanne')
+  })
 })
