@@ -1,0 +1,786 @@
+/* =============================================================================
+   Tokens de diseño
+   Guías modern-web-guidance: "color", "dark-mode", "typography", "responsive-design".
+   - Claro/oscuro según la preferencia del sistema (prefers-color-scheme).
+   - Contraste: texto ≥ 4.5:1, bordes de controles y foco ≥ 3:1.
+   ========================================================================== */
+:root {
+  /* Valores en bruto de cada tema */
+  --bg-light: #f6f7f9;
+  --surface-light: #ffffff;
+  --text-light: #1f2328;
+  --text-muted-light: #57606a; /* 6.2:1 sobre blanco */
+  --border-light: #d0d7de; /* decorativo (paneles) */
+  --border-strong-light: #6e7781; /* bordes de controles: 4.6:1 */
+  --accent-light: #2457c5; /* 6.5:1 sobre blanco */
+  --on-accent-light: #ffffff;
+  --accent-subtle-light: #e8effc;
+  --danger-light: #b42318;
+  --danger-subtle-light: #fdecea;
+  --success-light: #1a7f37;
+
+  --bg-dark: #0f1115;
+  --surface-dark: #171a21;
+  --text-dark: #e6e8eb;
+  --text-muted-dark: #9aa4b2;
+  --border-dark: #2d333b;
+  --border-strong-dark: #8b949e;
+  --accent-dark: #7aa7ff;
+  --on-accent-dark: #0b1220;
+  --accent-subtle-dark: #1c2a45;
+  --danger-dark: #ff8a80;
+  --danger-subtle-dark: #3a1d1d;
+  --success-dark: #6fdd8b;
+
+  /* Tokens en uso (tema claro por defecto) */
+  --color-bg: var(--bg-light);
+  --color-surface: var(--surface-light);
+  --color-text: var(--text-light);
+  --color-text-muted: var(--text-muted-light);
+  --color-border: var(--border-light);
+  --color-border-strong: var(--border-strong-light);
+  --color-accent: var(--accent-light);
+  --color-on-accent: var(--on-accent-light);
+  --color-accent-subtle: var(--accent-subtle-light);
+  --color-danger: var(--danger-light);
+  --color-danger-subtle: var(--danger-subtle-light);
+  --color-success: var(--success-light);
+
+  --radius: 0.5rem;
+  --radius-sm: 0.375rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+
+  /* En :root para que barras de scroll, controles nativos y lienzo sigan el tema */
+  color-scheme: light dark;
+  accent-color: var(--color-accent);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+
+  /* Los @media anidados van al final: todas las declaraciones de :root antes que ellos */
+  @media (prefers-color-scheme: dark) {
+    --color-bg: var(--bg-dark);
+    --color-surface: var(--surface-dark);
+    --color-text: var(--text-dark);
+    --color-text-muted: var(--text-muted-dark);
+    --color-border: var(--border-dark);
+    --color-border-strong: var(--border-strong-dark);
+    --color-accent: var(--accent-dark);
+    --color-on-accent: var(--on-accent-dark);
+    --color-accent-subtle: var(--accent-subtle-dark);
+    --color-danger: var(--danger-dark);
+    --color-danger-subtle: var(--danger-subtle-dark);
+    --color-success: var(--success-dark);
+  }
+
+  /* Los bordes decorativos se refuerzan si el usuario pide más contraste */
+  @media (prefers-contrast: more) {
+    --color-border: var(--color-border-strong);
+  }
+}
+
+/* =============================================================================
+   Base
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Un `display` de autor (grid, flex…) anularía el `display: none` del atributo hidden */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  text-align: start;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+:where(a:any-link, button, input, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Encabezados que reciben el foco por programa (tabindex=-1): anillo más discreto */
+:where(h1, h2, h3)[tabindex='-1'] {
+  scroll-margin-block-start: var(--space-4);
+}
+
+:where(h1, h2, h3)[tabindex='-1']:focus-visible {
+  outline-width: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Desplazamiento suave solo si el usuario no pidió reducir el movimiento (guía "motion") */
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Oculta visualmente pero mantiene en el árbol de accesibilidad (guía "accessibility") */
+.visually-hidden:where(:not(:focus-within, :active)) {
+  position: absolute !important;
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* =============================================================================
+   Layout
+   ========================================================================== */
+.app {
+  max-inline-size: 75rem;
+  margin-inline: auto;
+  padding: var(--space-4);
+}
+
+.app-header {
+  padding-block: var(--space-2) var(--space-6);
+}
+
+.app-header h1 {
+  margin: 0;
+  /* Fluido entre 1.5rem y 2.25rem (máx ≤ 2.5× mín para no romper el zoom) */
+  font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+}
+
+.app-header p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+}
+
+.layout {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+/* Punto de corte compartido con JS (NARROW_VIEWPORT_QUERY en useMediaQuery.ts): por debajo,
+   una columna y el detalle se abre en un <dialog>; por encima, dos columnas. Es una media
+   query (no @container) porque JS tiene que evaluar exactamente la misma condición. */
+@media (width >= 50rem) {
+  .layout {
+    grid-template-columns: minmax(16rem, 20rem) 1fr;
+  }
+
+  /* En escritorio la lista de usuarios queda fija mientras se recorren las publicaciones */
+  .layout > .panel:first-child {
+    position: sticky;
+    inset-block-start: var(--space-4);
+    max-block-size: calc(100dvh - 2 * var(--space-4));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  min-inline-size: 0; /* permite que el texto largo se ajuste dentro de la rejilla */
+}
+
+.panel h2 {
+  margin-block: 0 var(--space-3);
+  font-size: 1.25rem;
+}
+
+.placeholder {
+  display: grid;
+  place-items: center;
+  min-block-size: 10rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* =============================================================================
+   Controles de formulario (guía "forms")
+   ========================================================================== */
+input,
+textarea,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+textarea {
+  inline-size: 100%;
+  /* Mínimo 1rem para que iOS no haga zoom al enfocar */
+  font-size: max(1rem, 1em);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+input {
+  min-block-size: 2.75rem;
+}
+
+textarea {
+  min-block-size: 6rem;
+  resize: vertical;
+}
+
+.button-primary,
+.button-secondary {
+  min-block-size: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button-primary {
+  justify-self: start;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.button-primary:hover {
+  background: color-mix(in oklab, var(--color-accent), var(--color-text) 15%);
+}
+
+.button-primary[aria-disabled='true'] {
+  opacity: 0.75;
+  cursor: progress;
+}
+
+.button-secondary {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+.button-secondary:hover {
+  background: var(--color-accent-subtle);
+}
+
+/* =============================================================================
+   Buscador y lista de usuarios
+   ========================================================================== */
+.user-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.user-search label {
+  font-weight: 600;
+}
+
+.result-count {
+  margin: var(--space-2) 0;
+  min-block-size: 1.5em; /* reserva la línea para que la lista no salte al aparecer el texto */
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.user-list,
+.post-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.user-list {
+  gap: var(--space-2);
+}
+
+.user-item {
+  display: grid;
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  text-align: start;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-inline-start-width: 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.user-item:hover {
+  background: color-mix(in oklab, var(--color-surface), var(--color-accent) 8%);
+}
+
+/* Seleccionado: no solo color, también borde más grueso y peso de fuente */
+.user-item[aria-current='true'] {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+}
+
+.user-item[aria-current='true'] .user-name {
+  font-weight: 700;
+}
+
+.user-name {
+  font-weight: 500;
+}
+
+.user-meta {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+/* En móvil cada usuario abre una vista nueva: un chevron lo indica, como en las apps nativas.
+   Texto alternativo vacío ("/ ''"): es decorativo y no debe leerse. */
+@media (width < 50rem) {
+  .user-item {
+    grid-template-columns: 1fr auto;
+  }
+
+  .user-item > span {
+    grid-column: 1;
+  }
+
+  .user-item::after {
+    content: '›' / '';
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    align-self: center;
+    font-size: 1.5rem;
+    color: var(--color-text-muted);
+  }
+}
+
+/* =============================================================================
+   Hoja flotante de publicaciones (móvil): <dialog> modal
+   Guías "dialog", "prevent-page-scroll-under-modal-dialog", "animate-to-from-top-layer".
+   ========================================================================== */
+.posts-dialog {
+  /* Hoja que sube desde abajo y deja ver un poco la lista detrás */
+  inset: auto 0 0 0;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  block-size: calc(100dvh - 1.5rem);
+  max-block-size: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-start-start-radius: 1rem;
+  border-start-end-radius: 1rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+
+  /* MANDATORY (guía): el scroll dentro de la hoja no se encadena a la página de fondo */
+  overscroll-behavior: contain;
+
+  /* Entrada: fundido + subida (solo si no se pidió reducir el movimiento) */
+  transition-property: opacity, translate, display, overlay;
+  transition-duration: 250ms;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+.posts-dialog[open] {
+  opacity: 1;
+  @starting-style {
+    opacity: 0;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    translate: 0 0;
+    @starting-style {
+      translate: 0 100%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .posts-dialog {
+    transition-duration: 100ms;
+  }
+}
+
+.posts-dialog::backdrop {
+  /* MANDATORY (guía): ::backdrop no es contenedor de scroll por defecto */
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgb(0 0 0 / 0.45);
+  transition-property: background-color, display, overlay;
+  transition-duration: 250ms;
+  transition-behavior: allow-discrete;
+}
+
+.posts-dialog[open]::backdrop {
+  @starting-style {
+    background-color: rgb(0 0 0 / 0);
+  }
+}
+
+.dialog-bar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.back-button:hover {
+  background: var(--color-accent-subtle);
+}
+
+/* Dentro de la hoja el panel no necesita su propio marco */
+.posts-dialog .panel {
+  border: 0;
+  border-radius: 0;
+}
+
+@media (forced-colors: active) {
+  .posts-dialog {
+    border: 1px solid CanvasText;
+  }
+}
+
+/* =============================================================================
+   Publicaciones
+   ========================================================================== */
+.post-list > li {
+  padding-block: var(--space-3);
+}
+
+.post-list > li + li {
+  border-block-start: 1px solid var(--color-border);
+}
+
+.post {
+  max-inline-size: 70ch; /* líneas legibles */
+  overflow-wrap: anywhere; /* el título/texto lo escribe el usuario: palabras largas */
+}
+
+.post h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.post h3::first-letter {
+  text-transform: uppercase;
+}
+
+.post p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
+
+.badge {
+  display: inline-block;
+  margin-inline-start: var(--space-2);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  background: var(--color-accent-subtle);
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.empty {
+  color: var(--color-text-muted);
+}
+
+/* =============================================================================
+   Formulario de nueva publicación (plegable)
+   ========================================================================== */
+.post-form-container {
+  margin-block-end: var(--space-4);
+}
+
+.post-form-container > .post-form {
+  margin-block-start: var(--space-3);
+}
+
+/* El aviso de éxito siempre está en el DOM (región viva fiable); solo ocupa sitio con texto */
+.post-form-container > .form-success:not(:empty) {
+  margin-block-start: var(--space-3);
+}
+
+.add-post-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toggle-icon {
+  font-size: 1.25em;
+  line-height: 1;
+  /* "+" girado 45° se lee como "×" cuando el formulario está abierto */
+  transition: rotate 150ms ease-out;
+}
+
+.add-post-toggle[aria-expanded='true'] .toggle-icon {
+  rotate: 45deg;
+}
+
+.post-form {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: color-mix(in oklab, var(--color-surface), var(--color-bg) 50%);
+
+  /* Entrada suave al desplegar (de display:none a visible) con @starting-style.
+     El desplazamiento solo si el usuario no pidió reducir el movimiento. */
+  transition: opacity 150ms ease-out;
+  @starting-style {
+    opacity: 0;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity 150ms ease-out, translate 150ms ease-out;
+    @starting-style {
+      translate: 0 -0.5rem;
+    }
+  }
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.post-form h3,
+.post-form p {
+  margin: 0;
+}
+
+.post-form h3 {
+  font-size: 1.125rem;
+}
+
+.form-hint {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field label {
+  font-weight: 600;
+}
+
+.field [aria-invalid='true'] {
+  border-color: var(--color-danger);
+  border-width: 2px;
+}
+
+.field-error {
+  color: var(--color-danger);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.form-success {
+  margin-block: 0;
+  color: var(--color-success);
+  font-weight: 500;
+}
+
+/* =============================================================================
+   Estados: error y carga
+   ========================================================================== */
+.error-message {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-3);
+  border: 1px solid var(--color-danger);
+  border-inline-start-width: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-subtle);
+}
+
+.error-message p {
+  margin: 0;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  color: var(--color-text-muted);
+  /* Aparece tras un breve retardo: si la API responde rápido no hay parpadeo.
+     Solo anima opacity (no es movimiento) y `both` garantiza que termina visible. */
+  animation: loading-appear 150ms ease-out 300ms both;
+}
+
+@keyframes loading-appear {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Spinner basado en <progress> indeterminado (guía "spinner") */
+@property --arc-start {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@property --arc-end {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@property --progress-dash-animation {
+  syntax: '*';
+  inherits: false;
+  initial-value: , progress-dash 3s ease-in-out infinite;
+}
+
+progress.loading-spinner:indeterminate::-webkit-progress-bar,
+progress.loading-spinner:indeterminate::-webkit-progress-value {
+  display: none;
+  background: none;
+}
+progress.loading-spinner:indeterminate::-moz-progress-bar {
+  display: none;
+  background: none;
+}
+
+progress.loading-spinner:indeterminate {
+  --_from: calc(90deg + var(--arc-start, 0deg));
+  --_to: calc(90deg + var(--arc-end, 158deg));
+  --size: 1.75rem;
+  --thickness: 3px;
+  --spinner-color: var(--color-accent);
+  --track-color: var(--color-border);
+  --spinner-duration: 1.5s;
+  --_used-spinner-duration: var(--spinner-duration);
+
+  position: relative;
+  flex-shrink: 0;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  appearance: none;
+  background: conic-gradient(
+      from var(--_from),
+      var(--spinner-color) calc(var(--_to) - var(--_from)),
+      transparent 0
+    )
+    var(--track-color);
+
+  @supports (background-clip: border-area) {
+    background-clip: border-area;
+    border: var(--thickness) solid transparent;
+    background-origin: border-box;
+  }
+
+  @supports not (background-clip: border-area) {
+    --clip-boundary: calc(100% - var(--thickness));
+    mask-image: radial-gradient(
+      farthest-side,
+      transparent var(--clip-boundary),
+      black var(--clip-boundary)
+    );
+    border: 0;
+  }
+
+  @media (forced-colors: active) {
+    forced-color-adjust: none;
+    --spinner-color: CanvasText;
+    --track-color: Canvas;
+  }
+
+  animation:
+    progress-spin var(--_used-spinner-duration) linear infinite
+    var(--progress-dash-animation, );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  progress.loading-spinner:indeterminate {
+    --_used-spinner-duration: 6s;
+    --progress-dash-animation: ;
+    --arc-end: 158deg;
+  }
+}
+
+@keyframes progress-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+
+@keyframes progress-dash {
+  from {
+    --arc-start: 0deg;
+    --arc-end: 3deg;
+  }
+  50% {
+    --arc-start: 100deg;
+    --arc-end: 358deg;
+  }
+  to {
+    --arc-start: 360deg;
+    --arc-end: 363deg;
+  }
+}
+
+/* =============================================================================
+   Modo de colores forzados (alto contraste de Windows)
+   El navegador sustituye los colores; se usan palabras clave del sistema para
+   que el estado seleccionado y los errores sigan distinguiéndose.
+   ========================================================================== */
+@media (forced-colors: active) {
+  .user-item[aria-current='true'] {
+    border-color: Highlight;
+  }
+
+  .field [aria-invalid='true'],
+  .error-message {
+    border-color: CanvasText;
+  }
+
+  .button-primary {
+    border-color: ButtonText;
+  }
+}
