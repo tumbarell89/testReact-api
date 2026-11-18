@@ -27,6 +27,12 @@ export function UserPosts({ user }: { user: User }) {
     headingRef.current?.focus()
   }, [user.id])
 
+  // Igual que en la lista: al reintentar, el foco no se pierde al desaparecer el botón.
+  function handleRetry() {
+    headingRef.current?.focus()
+    posts.reload()
+  }
+
   const handleCreated = useCallback(
     (created: Post) => setPosts((current) => [{ ...created, id: nextLocalId() }, ...current]),
     [setPosts],
@@ -44,7 +50,7 @@ export function UserPosts({ user }: { user: User }) {
       {posts.status === 'loading' && <Loading label="Cargando publicaciones…" />}
 
       {posts.status === 'error' && (
-        <ErrorMessage message={getErrorMessage(posts.error)} onRetry={posts.reload} />
+        <ErrorMessage message={getErrorMessage(posts.error)} onRetry={handleRetry} />
       )}
 
       {posts.status === 'success' && (

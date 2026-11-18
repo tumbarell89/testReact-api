@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { getErrorMessage, getUsers } from '../api/client'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useFetch } from '../hooks/useFetch'
@@ -20,17 +20,27 @@ export function UserList({ selectedUserId, onSelect }: UserListProps) {
   // `getUsers` es una función de módulo: su identidad es estable y solo se pide una vez.
   const users = useFetch(getUsers)
   const [query, setQuery] = useState('')
+  const headingRef = useRef<HTMLHeadingElement>(null)
+
+  // "Reintentar" desaparece al empezar la recarga: el foco pasa al encabezado
+  // del panel para que no caiga en <body> y el usuario de teclado no pierda su posición.
+  function handleRetry() {
+    headingRef.current?.focus()
+    users.reload()
+  }
 
   return (
     <section className="panel">
-      <h2>Usuarios</h2>
+      <h2 ref={headingRef} tabIndex={-1}>
+        Usuarios
+      </h2>
 
       <UserSearch value={query} onChange={setQuery} />
 
       {users.status === 'loading' && <Loading label="Cargando usuarios…" />}
 
       {users.status === 'error' && (
-        <ErrorMessage message={getErrorMessage(users.error)} onRetry={users.reload} />
+        <ErrorMessage message={getErrorMessage(users.error)} onRetry={handleRetry} />
       )}
 
       {users.status === 'success' && (

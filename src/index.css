@@ -216,6 +216,15 @@ textarea {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  /* Aparece tras un breve retardo: si la API responde rápido no hay parpadeo.
+     Solo anima opacity (no es movimiento) y `both` garantiza que termina visible. */
+  animation: loading-appear 150ms ease-out 300ms both;
+}
+
+@keyframes loading-appear {
+  from {
+    opacity: 0;
+  }
 }
 
 /* Spinner basado en <progress> indeterminado (guía modern-web-guidance "spinner") */
