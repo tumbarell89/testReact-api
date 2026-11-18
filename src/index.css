@@ -5,34 +5,54 @@
    - Contraste: texto ≥ 4.5:1, bordes de controles y foco ≥ 3:1.
    ========================================================================== */
 :root {
+  /* Paleta negro + amarillo. El amarillo nunca se usa como texto sobre fondo claro
+     (≈1.5:1): en claro es el texto de los botones negros; en oscuro, el acento. */
+  --yellow: #facc15;
+  --black: #18181b;
+
   /* Valores en bruto de cada tema */
-  --bg-light: #f6f7f9;
+  --bg-light: #fffbeb;
   --surface-light: #ffffff;
   --text-light: #1f2328;
-  --text-muted-light: #57606a; /* 6.2:1 sobre blanco */
-  --border-light: #d0d7de; /* decorativo (paneles) */
+  --text-muted-light: #57606a; /* 5.1:1 incluso sobre el punto más amarillo del degradado */
+  --border-light: #e7dcb8; /* decorativo (paneles) */
   --border-strong-light: #6e7781; /* bordes de controles: 4.6:1 */
-  --accent-light: #2457c5; /* 6.5:1 sobre blanco */
-  --on-accent-light: #ffffff;
-  --accent-subtle-light: #e8effc;
+  --accent-light: var(--black); /* botones negros… */
+  --on-accent-light: var(--yellow); /* …con texto amarillo: 11.6:1 */
+  --accent-subtle-light: #fef3c7;
   --danger-light: #b42318;
   --danger-subtle-light: #fdecea;
   --success-light: #1a7f37;
+  /* Degradado crema → amarillo suave */
+  --bg-gradient-light: linear-gradient(160deg var(--in-oklab), #fffbeb 0%, #fef3c7 45%, #fde68a 100%);
+  --shadow-light: 0 1px 2px rgb(24 24 27 / 0.06), 0 8px 24px rgb(120 90 0 / 0.1);
 
-  --bg-dark: #0f1115;
-  --surface-dark: #171a21;
+  --bg-dark: #09090b;
+  --surface-dark: #18181b;
   --text-dark: #e6e8eb;
   --text-muted-dark: #9aa4b2;
-  --border-dark: #2d333b;
+  --border-dark: #2e2c22;
   --border-strong-dark: #8b949e;
-  --accent-dark: #7aa7ff;
-  --on-accent-dark: #0b1220;
-  --accent-subtle-dark: #1c2a45;
+  --accent-dark: var(--yellow); /* botones amarillos… */
+  --on-accent-dark: var(--black); /* …con texto negro: 11.6:1 */
+  --accent-subtle-dark: #3a3415;
   --danger-dark: #ff8a80;
   --danger-subtle-dark: #3a1d1d;
   --success-dark: #6fdd8b;
+  /* Negro con resplandores amarillos difusos en esquinas opuestas */
+  --bg-gradient-dark:
+    radial-gradient(60rem 40rem at 0% 0% var(--in-oklab), rgb(250 204 21 / 0.22), transparent 70%),
+    radial-gradient(50rem 35rem at 100% 100% var(--in-oklab), rgb(250 204 21 / 0.1), transparent 70%),
+    linear-gradient(to bottom var(--in-oklab), #09090b, #0f0e08);
+  --shadow-dark: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px rgb(0 0 0 / 0.45);
+
+  /* Espacio de interpolación de los degradados: oklab donde se soporte (guía "visual-effects").
+     Vacío por defecto para que los navegadores antiguos no descarten el degradado entero. */
+  --in-oklab: ;
 
   /* Tokens en uso (tema claro por defecto) */
+  --bg-gradient: var(--bg-gradient-light);
+  --shadow: var(--shadow-light);
   --color-bg: var(--bg-light);
   --color-surface: var(--surface-light);
   --color-text: var(--text-light);
@@ -64,6 +84,8 @@
 
   /* Los @media anidados van al final: todas las declaraciones de :root antes que ellos */
   @media (prefers-color-scheme: dark) {
+    --bg-gradient: var(--bg-gradient-dark);
+    --shadow: var(--shadow-dark);
     --color-bg: var(--bg-dark);
     --color-surface: var(--surface-dark);
     --color-text: var(--text-dark);
@@ -84,6 +106,12 @@
   }
 }
 
+@supports (background: linear-gradient(in oklab, white, black)) {
+  :root {
+    --in-oklab: in oklab;
+  }
+}
+
 /* =============================================================================
    Base
    ========================================================================== */
@@ -100,9 +128,22 @@
 
 body {
   margin: 0;
+  min-block-size: 100dvh;
+  /* Color sólido de respaldo: en colores forzados (o sin soporte) el degradado desaparece */
   background: var(--color-bg);
   color: var(--color-text);
   text-align: start;
+}
+
+/* Degradado de fondo en una capa fija: no se repinta al hacer scroll (a diferencia de
+   background-attachment: fixed, que además iOS ignora) y queda detrás de todo el contenido. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--bg-gradient);
+  pointer-events: none;
 }
 
 h1,
@@ -197,7 +238,10 @@ h3 {
 
 .panel {
   background: var(--color-surface);
+  /* El borde define el límite (se mantiene en colores forzados); la sombra en capas
+     solo despega el panel del degradado (guía "visual-effects") */
   border: 1px solid var(--color-border);
+  box-shadow: var(--shadow);
   border-radius: var(--radius);
   padding: var(--space-4);
   min-inline-size: 0; /* permite que el texto largo se ajuste dentro de la rejilla */
@@ -262,8 +306,9 @@ textarea {
   color: var(--color-on-accent);
 }
 
+/* Hover: el acento se acerca un poco a su color de texto (negro→oliva en claro, amarillo→ocre en oscuro) */
 .button-primary:hover {
-  background: color-mix(in oklab, var(--color-accent), var(--color-text) 15%);
+  background: color-mix(in oklab, var(--color-accent), var(--color-on-accent) 15%);
 }
 
 .button-primary[aria-disabled='true'] {
@@ -467,6 +512,7 @@ textarea {
 .posts-dialog .panel {
   border: 0;
   border-radius: 0;
+  box-shadow: none;
 }
 
 @media (forced-colors: active) {
