@@ -186,7 +186,12 @@ export function PostForm({ userId, onCreated }: PostFormProps) {
 
       {/* Resultado del envío, visible y anunciado de forma educada. */}
       <p className="form-success" role="status">
-        {successMessage}
+        {successMessage && (
+          <>
+            <span aria-hidden="true">✓ </span>
+            {successMessage}
+          </>
+        )}
       </p>
 
       {/* Única región viva para los errores que aparecen al salir de un campo. */}

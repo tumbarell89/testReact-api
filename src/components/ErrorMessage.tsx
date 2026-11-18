@@ -7,9 +7,13 @@ interface ErrorMessageProps {
 export function ErrorMessage({ message, onRetry }: ErrorMessageProps) {
   return (
     <div className="error-message" role="alert">
-      <p>{message}</p>
+      {/* El icono refuerza el estado sin depender solo del color; el texto ya lo explica. */}
+      <p>
+        <span aria-hidden="true">⚠ </span>
+        {message}
+      </p>
       {onRetry && (
-        <button type="button" onClick={onRetry}>
+        <button type="button" className="button-secondary" onClick={onRetry}>
           Reintentar
         </button>
       )}
