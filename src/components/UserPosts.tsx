@@ -14,26 +14,37 @@ let lastLocalId = 0
 const nextLocalId = () => --lastLocalId
 const isLocalPost = (post: Post) => post.id < 0
 
-export function UserPosts({ user }: { user: User }) {
+interface UserPostsProps {
+  user: User
+  /** id del encabezado, para que un contenedor (el <dialog> en móvil) se nombre con él. */
+  headingId?: string
+  /**
+   * Mover el foco al encabezado al elegir usuario (vista de escritorio).
+   * Dentro del <dialog> es `false`: allí el foco lo gestiona showModal().
+   */
+  focusHeadingOnSelect?: boolean
+}
+
+export function UserPosts({ user, headingId, focusHeadingOnSelect = true }: UserPostsProps) {
   // Se vuelve a pedir solo cuando cambia el usuario.
   const fetchPosts = useCallback((signal: AbortSignal) => getPostsByUser(user.id, signal), [user.id])
   const posts = useFetch(fetchPosts)
   const { setData: setPosts } = posts
 
   // Al elegir un usuario, el foco pasa al encabezado del panel (los lectores de pantalla
-  // anuncian el contexto nuevo). focus() por sí solo desplaza "lo justo" y en móvil dejaba el
-  // encabezado pegado al borde inferior: si queda en la mitad de abajo, se lleva arriba.
+  // anuncian el contexto nuevo). Si el usuario había bajado por la página y el encabezado
+  // queda fuera de la vista (o en la mitad de abajo), se lleva arriba.
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
     const heading = headingRef.current
-    if (!heading) return
+    if (!heading || !focusHeadingOnSelect) return
     heading.focus({ preventScroll: true })
     const { top } = heading.getBoundingClientRect()
     if (top < 0 || top > window.innerHeight / 2) {
       // El suavizado lo decide CSS (scroll-behavior), que respeta prefers-reduced-motion.
       heading.scrollIntoView?.({ block: 'start' })
     }
-  }, [user.id])
+  }, [user.id, focusHeadingOnSelect])
 
   // Igual que en la lista: al reintentar, el foco no se pierde al desaparecer el botón.
   function handleRetry() {
@@ -51,7 +62,7 @@ export function UserPosts({ user }: { user: User }) {
       {/* React 19 lleva <title> al <head>: el título de la pestaña refleja la vista actual. */}
       <title>{`Publicaciones de ${user.name} | Usuarios y publicaciones`}</title>
 
-      <h2 ref={headingRef} tabIndex={-1}>
+      <h2 id={headingId} ref={headingRef} tabIndex={-1}>
         Publicaciones de {user.name}
       </h2>
 

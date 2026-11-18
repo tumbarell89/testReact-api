@@ -154,8 +154,6 @@ h3 {
   max-inline-size: 75rem;
   margin-inline: auto;
   padding: var(--space-4);
-  /* El layout responde al ancho de su contenedor, no del viewport */
-  container-type: inline-size;
 }
 
 .app-header {
@@ -179,15 +177,10 @@ h3 {
   align-items: start;
 }
 
-@container (width < 48rem) {
-  /* En una columna el panel ocupa al menos la pantalla: al elegir usuario siempre hay
-     sitio para llevar su encabezado arriba mientras las publicaciones aún cargan. */
-  .posts-panel {
-    min-block-size: calc(100dvh - 2 * var(--space-4));
-  }
-}
-
-@container (width >= 48rem) {
+/* Punto de corte compartido con JS (NARROW_VIEWPORT_QUERY en useMediaQuery.ts): por debajo,
+   una columna y el detalle se abre en un <dialog>; por encima, dos columnas. Es una media
+   query (no @container) porque JS tiene que evaluar exactamente la misma condición. */
+@media (width >= 50rem) {
   .layout {
     grid-template-columns: minmax(16rem, 20rem) 1fr;
   }
@@ -354,6 +347,132 @@ textarea {
 .user-meta {
   font-size: 0.875rem;
   color: var(--color-text-muted);
+}
+
+/* En móvil cada usuario abre una vista nueva: un chevron lo indica, como en las apps nativas.
+   Texto alternativo vacío ("/ ''"): es decorativo y no debe leerse. */
+@media (width < 50rem) {
+  .user-item {
+    grid-template-columns: 1fr auto;
+  }
+
+  .user-item > span {
+    grid-column: 1;
+  }
+
+  .user-item::after {
+    content: '›' / '';
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    align-self: center;
+    font-size: 1.5rem;
+    color: var(--color-text-muted);
+  }
+}
+
+/* =============================================================================
+   Hoja flotante de publicaciones (móvil): <dialog> modal
+   Guías "dialog", "prevent-page-scroll-under-modal-dialog", "animate-to-from-top-layer".
+   ========================================================================== */
+.posts-dialog {
+  /* Hoja que sube desde abajo y deja ver un poco la lista detrás */
+  inset: auto 0 0 0;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  block-size: calc(100dvh - 1.5rem);
+  max-block-size: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-start-start-radius: 1rem;
+  border-start-end-radius: 1rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+
+  /* MANDATORY (guía): el scroll dentro de la hoja no se encadena a la página de fondo */
+  overscroll-behavior: contain;
+
+  /* Entrada: fundido + subida (solo si no se pidió reducir el movimiento) */
+  transition-property: opacity, translate, display, overlay;
+  transition-duration: 250ms;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+.posts-dialog[open] {
+  opacity: 1;
+  @starting-style {
+    opacity: 0;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    translate: 0 0;
+    @starting-style {
+      translate: 0 100%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .posts-dialog {
+    transition-duration: 100ms;
+  }
+}
+
+.posts-dialog::backdrop {
+  /* MANDATORY (guía): ::backdrop no es contenedor de scroll por defecto */
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgb(0 0 0 / 0.45);
+  transition-property: background-color, display, overlay;
+  transition-duration: 250ms;
+  transition-behavior: allow-discrete;
+}
+
+.posts-dialog[open]::backdrop {
+  @starting-style {
+    background-color: rgb(0 0 0 / 0);
+  }
+}
+
+.dialog-bar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.back-button:hover {
+  background: var(--color-accent-subtle);
+}
+
+/* Dentro de la hoja el panel no necesita su propio marco */
+.posts-dialog .panel {
+  border: 0;
+  border-radius: 0;
+}
+
+@media (forced-colors: active) {
+  .posts-dialog {
+    border: 1px solid CanvasText;
+  }
 }
 
 /* =============================================================================
