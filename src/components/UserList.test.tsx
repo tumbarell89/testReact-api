@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { User } from '../types'
@@ -31,7 +31,8 @@ describe('UserList: búsqueda por nombre', () => {
 
     expect(within(screen.getByRole('list')).getAllByRole('button')).toHaveLength(1)
     expect(screen.getByRole('button', { name: /ervin howell/i })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('1 de 3 usuarios')
+    // El recuento se anuncia con un pequeño retardo (debounce) tras dejar de teclear.
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('1 de 3 usuarios'))
   })
 
   it('avisa cuando ningún usuario coincide y se recupera al borrar', async () => {
@@ -40,9 +41,12 @@ describe('UserList: búsqueda por nombre', () => {
 
     await user.type(search, 'zzz')
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Ningún usuario coincide con «zzz».')
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Ningún usuario coincide con «zzz».'),
+    )
 
     await user.clear(search)
     expect(within(screen.getByRole('list')).getAllByRole('button')).toHaveLength(3)
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement())
   })
 })

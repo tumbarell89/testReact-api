@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { getErrorMessage, getUsers } from '../api/client'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useFetch } from '../hooks/useFetch'
 import type { User } from '../types'
 import { filterUsersByName } from '../utils/search'
 import { ErrorMessage } from './ErrorMessage'
 import { Loading } from './Loading'
 import { UserSearch } from './UserSearch'
+
+/** Espera antes de anunciar el nº de resultados, para no saturar al lector de pantalla al teclear. */
+const ANNOUNCE_DELAY_MS = 400
 
 interface UserListProps {
   selectedUserId: number | null
@@ -18,8 +22,8 @@ export function UserList({ selectedUserId, onSelect }: UserListProps) {
   const [query, setQuery] = useState('')
 
   return (
-    <section className="panel" aria-labelledby="users-title">
-      <h2 id="users-title">Usuarios</h2>
+    <section className="panel">
+      <h2>Usuarios</h2>
 
       <UserSearch value={query} onChange={setQuery} />
 
@@ -47,19 +51,29 @@ interface FilteredUsersProps extends UserListProps {
 }
 
 function FilteredUsers({ users, query, selectedUserId, onSelect }: FilteredUsersProps) {
+  // La lista se filtra al instante; solo el anuncio del recuento espera a que se deje de teclear.
   const visibleUsers = filterUsersByName(users, query)
-  const isFiltering = query.trim() !== ''
+  const announcedQuery = useDebouncedValue(query.trim(), ANNOUNCE_DELAY_MS)
+  const announcedCount = filterUsersByName(users, announcedQuery).length
+
+  let announcement = ''
+  if (announcedQuery !== '') {
+    announcement =
+      announcedCount > 0
+        ? `${announcedCount} de ${users.length} usuarios`
+        : `Ningún usuario coincide con «${announcedQuery}».`
+  }
 
   return (
     <>
-      {/* Región viva: anuncia el número de resultados al filtrar, sin mover el foco. */}
+      {/* Región viva "polite": anuncia el recuento al filtrar, sin mover el foco. */}
       <p className="result-count" role="status">
-        {isFiltering && visibleUsers.length > 0 && `${visibleUsers.length} de ${users.length} usuarios`}
-        {isFiltering && visibleUsers.length === 0 && `Ningún usuario coincide con «${query.trim()}».`}
+        {announcement}
       </p>
 
       {visibleUsers.length > 0 && (
-        <ul className="user-list">
+        // role="list" restaura la semántica que Safari quita con list-style: none.
+        <ul className="user-list" role="list">
           {visibleUsers.map((user) => (
             <li key={user.id}>
               <button
