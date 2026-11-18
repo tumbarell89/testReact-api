@@ -30,15 +30,18 @@ describe('App', () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { level: 1, name: /usuarios y publicaciones/i })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(/cargando usuarios/i)
+    expect(screen.getByRole('progressbar', { name: /cargando usuarios/i })).toBeInTheDocument()
 
     const ervin = await screen.findByRole('button', { name: /ervin howell/i })
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
     expect(screen.getByText(/selecciona un usuario/i)).toBeInTheDocument()
 
     await user.click(ervin)
 
     expect(ervin).toHaveAttribute('aria-current', 'true')
-    expect(screen.getByRole('heading', { name: /publicaciones de ervin howell/i })).toBeInTheDocument()
+    const postsHeading = screen.getByRole('heading', { name: /publicaciones de ervin howell/i })
+    expect(postsHeading).toHaveFocus()
+    expect(document.title).toBe('Publicaciones de Ervin Howell | Usuarios y publicaciones')
     expect(await screen.findByRole('heading', { name: 'Post de Ervin' })).toBeInTheDocument()
   })
 })

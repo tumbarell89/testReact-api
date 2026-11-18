@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { getErrorMessage, getPostsByUser } from '../api/client'
 import { useFetch } from '../hooks/useFetch'
 import type { User } from '../types'
@@ -10,9 +10,21 @@ export function UserPosts({ user }: { user: User }) {
   const fetchPosts = useCallback((signal: AbortSignal) => getPostsByUser(user.id, signal), [user.id])
   const posts = useFetch(fetchPosts)
 
+  // Al elegir un usuario, el foco pasa al encabezado del panel: los lectores de pantalla
+  // anuncian el contexto nuevo y, en móvil (una columna), el navegador lo desplaza a la vista.
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [user.id])
+
   return (
-    <section className="panel" aria-labelledby="posts-title">
-      <h2 id="posts-title">Publicaciones de {user.name}</h2>
+    <section className="panel">
+      {/* React 19 lleva <title> al <head>: el título de la pestaña refleja la vista actual. */}
+      <title>{`Publicaciones de ${user.name} | Usuarios y publicaciones`}</title>
+
+      <h2 ref={headingRef} tabIndex={-1}>
+        Publicaciones de {user.name}
+      </h2>
 
       {posts.status === 'loading' && <Loading label="Cargando publicaciones…" />}
 
@@ -24,7 +36,7 @@ export function UserPosts({ user }: { user: User }) {
         (posts.data.length === 0 ? (
           <p className="empty">Este usuario no tiene publicaciones.</p>
         ) : (
-          <ul className="post-list">
+          <ul className="post-list" role="list">
             {posts.data.map((post) => (
               <li key={post.id}>
                 <article className="post">
